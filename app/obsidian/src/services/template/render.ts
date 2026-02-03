@@ -11,12 +11,12 @@ import {
   Vault,
   parseYaml,
   stringifyYaml,
+  Plugin,
 } from "obsidian";
 import log, { logError } from "@/log";
 import { SettingsService, skip } from "@/settings/base";
 import { isMarkdownFile } from "@/utils";
 import { merge as mergeAnnotsTags } from "@/utils/merge";
-import ZoteroPlugin from "@/zt-main";
 import { ObsidianEta } from "./eta";
 import { patchCompile } from "./eta/patch";
 import { TemplateNames, fromPath } from "./eta/preset";
@@ -26,6 +26,7 @@ import type { AnnotHelper, DocItemHelper } from "./helper";
 import type { Context } from "./helper/base";
 import type { HelperExtra } from "./helper/to-helper";
 import { toHelper } from "./helper/to-helper";
+import { ImgCacheImporter } from "../zotero-db/img-import/service";
 
 interface ColoredText {
   content: string;
@@ -47,9 +48,15 @@ export interface TemplateDataMap {
 
 export class Template extends Service {
   eta = this.use(ObsidianEta);
-  plugin = this.use(ZoteroPlugin);
+  imgCacheImporter = this.use(ImgCacheImporter);
   settings = this.use(SettingsService);
   app = this.use(App);
+
+  private _plugin?: Plugin;
+  public initializePlugin(plugin: Plugin) {
+    this._plugin = plugin;
+  }
+
   get vault() {
     return this.app.vault;
   }
@@ -89,14 +96,16 @@ export class Template extends Service {
   }
   onload() {
     patchCompile(this.eta);
-    this.settings.once(async () => {
-      await this.loadTemplates();
-    });
+    this.register(
+      effect(() => {
+        this.loadTemplates();
+      }),
+    );
     this.register(
       effect(
         skip(
           () =>
-            this.plugin.app.vault.trigger(
+            this._plugin?.app.vault.trigger(
               "zotero:template-updated",
               "filename",
             ),
@@ -110,7 +119,7 @@ export class Template extends Service {
         skip(
           async () =>
             TemplateNames.All.forEach((type) =>
-              this.plugin.app.vault.trigger("zotero:template-updated", type),
+              this._plugin?.app.vault.trigger("zotero:template-updated", type),
             ),
           () => this.autoTrim,
           true,
@@ -177,7 +186,7 @@ export class Template extends Service {
   private render(target: string, obj: any): string {
     try {
       const markdown = this.eta.render(target, obj);
-      this.plugin.imgCacheImporter.flush();
+      this.imgCacheImporter.flush();
       return markdown;
     } catch (error) {
       console.error(
@@ -312,7 +321,7 @@ export class Template extends Service {
   async setFrontmatterTo(file: TFile, data: DocItemHelper) {
     try {
       const record = this.toFrontmatterRecord(data).data;
-      await this.plugin.app.fileManager.processFrontMatter(file, (fm) =>
+      await this._plugin?.app.fileManager.processFrontMatter(file, (fm) =>
         Object.assign(fm, record),
       );
     } catch (err) {
