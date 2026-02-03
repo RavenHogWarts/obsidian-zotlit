@@ -30,6 +30,6 @@
     "@mobily/ts-belt": "^4.0.0-rc.5"
   },
   "peerDependencies": {
-    "better-sqlite3": "12.6.0"
+    "better-sqlite3": "12.6.2"
   }
 }

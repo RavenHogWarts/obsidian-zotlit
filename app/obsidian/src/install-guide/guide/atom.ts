@@ -14,15 +14,15 @@ export const binaryLinkAtom = atom(
   (get) =>
     `https://github.com/WiseLibs/better-sqlite3/releases/download/${
       get(modalAtom).binaryVersion
-    }/${get(binaryNameAtom)}`
+    }/${get(binaryNameAtom)}`,
 );
 
 export const binaryLinkFastgitAtom = atom((get) =>
-  get(binaryLinkAtom).replace("github.com", "download.fastgit.org")
+  get(binaryLinkAtom).replace("github.com", "download.fastgit.org"),
 );
 
 export const binaryFullPathAtom = atom((get) =>
-  getBinaryFullPath(get(modalAtom).manifest)
+  getBinaryFullPath(get(modalAtom).manifest),
 );
 
 export const guideModeAtom = atom<GuideMode>((get) => get(modalAtom).mode);
